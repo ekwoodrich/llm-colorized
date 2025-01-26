@@ -4,6 +4,9 @@ from click_default_group import DefaultGroup
 from dataclasses import asdict
 import io
 import json
+
+from termcolor import colored, cprint
+
 from llm import (
     Attachment,
     AsyncResponse,
@@ -31,9 +34,9 @@ from llm import (
     remove_alias,
 )
 
-from .migrations import migrate
-from .plugins import pm, load_plugins
-from .utils import (
+from llm.migrations import migrate
+from llm.plugins import pm, load_plugins
+from llm.utils import (
     mimetype_from_path,
     mimetype_from_string,
     token_usage_string,
@@ -90,6 +93,46 @@ class AttachmentType(click.ParamType):
             raise click.BadParameter(f"Could not determine mimetype of {value}")
         return Attachment(type=mimetype, path=str(path), url=None, content=None)
 
+
+def colorize_ai_response(response):
+    bullet_nums = ["1.", "2.", "3.", "4.", "5.", "6.", "7.", "8.", "9.", "10.", "111."]
+    underlined = False
+    is_bullet_num = False
+    after_new_line = 0
+    new_line = False
+    num_previous = False
+    for chunk in response:
+        text = chunk
+        if "\n" in text:
+            after_new_line = 0
+            new_line = True
+        else:
+            after_new_line += 1
+
+        if num_previous:
+            pass
+        if text.find("**") > -1:
+            underlined = not underlined
+            text = text.replace("**", "")
+
+        if after_new_line <= 2:
+            new_line = True
+        else:
+            new_line = False
+
+        if after_new_line < 4 and (new_line and len(text)>0 and text[0].isdigit()) or (num_previous and len(text)>0 and text[0] == "."):
+            print(colored(text, "cyan", attrs=["bold", "reverse"]), end="")
+        else:
+            if underlined:
+                print(colored(text, "cyan", attrs=["bold", "underline"]), end="")
+            else:    
+                print(colored(text, "cyan", attrs=["bold"]), end="")
+
+        if len(text) > 0 and text[0].isdigit():
+            num_previous = True
+        else:
+            num_previous = False
+        sys.stdout.flush()
 
 def attachment_types_callback(ctx, param, values):
     collected = []
@@ -542,6 +585,11 @@ def chat(
     """
     Hold an ongoing chat with a model.
     """
+    
+    text = colored("Starting chat...", "green", attrs=["underline"])
+
+    print(text)
+
     # Left and right arrow keys to move cursor:
     if sys.platform != "win32":
         readline.parse_and_bind("\\e[D: backward-char")
@@ -644,9 +692,12 @@ def chat(
         response = conversation.prompt(prompt, system=system, **validated_options)
         # System prompt only sent for the first message:
         system = None
-        for chunk in response:
-            print(chunk, end="")
-            sys.stdout.flush()
+        # for chunk in response:
+        #     text = colored(chunk, "cyan", attrs=["bold"])    
+
+        #     print(text, end="")
+        #     sys.stdout.flush()
+        colorize_ai_response(response)
         response.log_to_db(db)
         print("")
 

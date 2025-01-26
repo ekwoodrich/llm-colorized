@@ -1,0 +1,13 @@
+    click
+    openai>=1.55.3
+    click-default-group>=1.2.3
+    sqlite-utils>=3.37
+    sqlite-migrate>=0.1a2
+    pydantic>=1.10.2
+    PyYAML
+    pluggy
+    python-ulid
+    setuptools
+    pip
+    pyreadline3; sys_platform == 'win32'
+    puremagic
